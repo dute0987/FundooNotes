@@ -216,7 +216,7 @@ namespace RepositaryLayer.Services
         {
             try
             {
-                return await fundooContext.Notes.Where(x => x.UserId == UserId).Include(u => u.User).Include(l => l.Label).ToListAsync();
+                return await fundooContext.Notes.Where(x => x.UserId == UserId).Include(u => u.User).ToListAsync();
             }
             catch(Exception)
             {
@@ -224,5 +224,18 @@ namespace RepositaryLayer.Services
             }
             
         }
+
+        //public async Task<List<Note>> GetAllNotes(int UserId)
+        //{
+        //    try
+        //    {
+        //        return await fundooContext.Notes.Where(u => u.UserId == UserId).Include(u => u.User).ToListAsync();
+        //    }
+        //    catch (Exception)
+        //    {
+
+        //        throw;
+        //    }
+        //}
     }
 }

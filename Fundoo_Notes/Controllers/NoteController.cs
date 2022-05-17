@@ -2,31 +2,39 @@
 using CommonLayer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using Repositary_Layer.FundooContext;
 using RepositaryLayer.Entites;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Fundoo_Notes.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class NoteController:ControllerBase
+    public class NoteController : ControllerBase
     {
         FundooContextDB fundooContext;
         INoteBL noteBL;
+        private readonly IMemoryCache memoryCache;
+        private readonly IDistributedCache distributedCache;
 
-        public NoteController(FundooContextDB fundoos,INoteBL noteBL)
+        public NoteController(FundooContextDB fundoos, INoteBL noteBL, IMemoryCache memoryCache, IDistributedCache distributedCache)
         {
             this.fundooContext = fundoos;
             this.noteBL = noteBL;
+            this.memoryCache = memoryCache;
+            this.distributedCache = distributedCache;
         }
         [Authorize]
         [HttpPost]
 
-        public async Task<ActionResult>AddNote(NotePostModel notePostModel)
+        public async Task<ActionResult> AddNote(NotePostModel notePostModel)
         {
             try
             {
@@ -44,7 +52,7 @@ namespace Fundoo_Notes.Controllers
 
         [Authorize]
         [HttpDelete("DeleteNote/{noteId}")]
-        public async Task<ActionResult>DeleteNote(int noteId)
+        public async Task<ActionResult> DeleteNote(int noteId)
         {
             try
             {
@@ -60,7 +68,7 @@ namespace Fundoo_Notes.Controllers
                 await this.noteBL.DeleteNote(UserId, noteId);
                 return this.Ok(new { success = true, message = "This Note Removed Successfully" });
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -91,7 +99,7 @@ namespace Fundoo_Notes.Controllers
         }
         [Authorize]
         [HttpPut("ArchiveNote/{noteId}")]
-        public async Task<ActionResult> ArchiveNote( int noteId)
+        public async Task<ActionResult> ArchiveNote(int noteId)
         {
             try
             {
@@ -107,7 +115,7 @@ namespace Fundoo_Notes.Controllers
                 await this.noteBL.ArchiveNote(UserId, noteId);
                 return this.Ok(new { success = true, message = "Note Archive sucessfully" });
             }
-            catch(Exception)
+            catch (Exception)
             {
                 throw;
             }
@@ -115,7 +123,7 @@ namespace Fundoo_Notes.Controllers
         [Authorize]
         [HttpPut("UpdateNote/{noteId}")]
 
-        public async Task<ActionResult> UpdateNote( int noteId, NoteUpdateModel noteUpdateModel)
+        public async Task<ActionResult> UpdateNote(int noteId, NoteUpdateModel noteUpdateModel)
         {
             try
             {
@@ -183,7 +191,7 @@ namespace Fundoo_Notes.Controllers
         }
         [Authorize]
         [HttpPut("Remainder/{noteId}/{RemainderDate}")]
-        public async Task<ActionResult> Remainder(int noteId,DateTime RemainderDate)
+        public async Task<ActionResult> Remainder(int noteId, DateTime RemainderDate)
         {
             try
             {
@@ -207,7 +215,7 @@ namespace Fundoo_Notes.Controllers
 
         [Authorize]
         [HttpGet("GetAllNotes")]
-        public async Task<ActionResult>GetAll()
+        public async Task<ActionResult> GetAll()
         {
             try
             {
@@ -216,9 +224,76 @@ namespace Fundoo_Notes.Controllers
                 List<Note> notes = await this.noteBL.GetAll(UserId);
                 return this.Ok(new { success = true, message = "These Nots are:", data = notes });
             }
-            catch(Exception)
+            catch (Exception)
             {
                 throw;
+            }
+        }
+        //[Authorize]
+        //[HttpGet("GetAllNotesRedis")]
+        //public async Task<ActionResult> GetAllNotes()
+        //{
+        //    try
+        //    {
+        //        string serializeNoteList;
+        //        string key = "Notelist";
+        //        var noteList = new List<Note>();
+        //        var redisNoteList = await distributedCache.GetAsync(key);
+        //        if (redisNoteList != null)
+        //        {
+        //            serializeNoteList = Encoding.UTF8.GetString(redisNoteList);
+        //            noteList = JsonConvert.DeserializeObject<List<Note>>(serializeNoteList);
+        //        }
+        //        else
+        //        {
+        //            var userid = User.Claims.FirstOrDefault(x => x.Type.ToString().Equals("UserID", StringComparison.InvariantCultureIgnoreCase));
+        //            int UserId = Int32.Parse(userid.Value);
+        //            noteList = await this.noteBL.GetAllNotes(UserId);
+        //            serializeNoteList = JsonConvert.SerializeObject(noteList);
+        //            redisNoteList = Encoding.UTF8.GetBytes(serializeNoteList);
+        //            var option = new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(20)).SetAbsoluteExpiration(TimeSpan.FromHours(6));
+
+        //            await distributedCache.SetAsync(key, redisNoteList, option);
+        //        }
+        //        return this.Ok(new { success = true, message = "Get note successful!!!", data = noteList });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw ex;
+        //    }
+        //}
+
+        [Authorize]
+        [HttpGet("GetAllNotesRedis")]
+        public async Task<ActionResult> GetAllNotes()
+        {
+            try
+            {
+                string serializeNoteList;
+                string key = "Notelist";
+                var noteList = new List<Note>();
+                var redisNoteList = await distributedCache.GetAsync(key);
+                if (redisNoteList != null)
+                {
+                    serializeNoteList = Encoding.UTF8.GetString(redisNoteList);
+                    noteList = JsonConvert.DeserializeObject<List<Note>>(serializeNoteList);
+                }
+                else
+                {
+                    var userid = User.Claims.FirstOrDefault(x => x.Type.ToString().Equals("UserID", StringComparison.InvariantCultureIgnoreCase));
+                    int UserId = Int32.Parse(userid.Value);
+                    noteList = await this.noteBL.GetAll(UserId);
+                    serializeNoteList = JsonConvert.SerializeObject(noteList);
+                    redisNoteList = Encoding.UTF8.GetBytes(serializeNoteList);
+                    var option = new DistributedCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(20)).SetAbsoluteExpiration(TimeSpan.FromHours(6));
+
+                    await distributedCache.SetAsync(key, redisNoteList, option);
+                }
+                return this.Ok(new { success = true, message = "Get note successful!!!", data = noteList });
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
         }
     }

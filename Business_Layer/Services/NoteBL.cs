@@ -70,13 +70,25 @@ namespace Business_Layer.Services
         {
             try
             {
-               return await this.noteRL.GetAll(UserId);
+                return await this.noteRL.GetAll(UserId);
             }
             catch (Exception ex)
             {
                 throw ex;
             }
         }
+
+        //public async Task<List<Note>> GetAllNotes(int UserId)
+        //{
+        //     try
+        //    {
+        //       return await this.noteRL.GetAllNotes(UserId);
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        throw ex;
+        //    }
+        //}
 
         public async Task PinNote(int UserId, int noteId)
         {

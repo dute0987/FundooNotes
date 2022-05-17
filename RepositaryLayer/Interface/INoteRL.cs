@@ -18,5 +18,6 @@ namespace RepositaryLayer.Interface
         Task TrashNote(int UserId,int noteId);
         Task Remainder(int UserId,int noteId,DateTime RemainderDate);
         Task<Note> UpdateNote(int UserId, int noteId, NoteUpdateModel noteUpdateModel);
+        //Task<List<Note>> GetAllNotes(int UserId);
     }
 }

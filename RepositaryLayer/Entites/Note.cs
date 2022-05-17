@@ -26,7 +26,7 @@ namespace RepositaryLayer.Entites
         public DateTime RemainderDate { get; set; }
         public int UserId { get; set; }
         public virtual User User { get; set; }
-        public virtual IList<Label> Label { get; set; }
+        //public virtual IList<Label> Label { get; set; }
 
 
 
